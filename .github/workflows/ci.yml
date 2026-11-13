@@ -1,0 +1,131 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_call:
+    inputs:
+      release-artifact:
+        description: Prepared release bundle from the calling workflow
+        type: string
+        required: false
+        default: ""
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ inputs.release-artifact == '' }}
+
+jobs:
+  test:
+    timeout-minutes: 25
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            ruby: "3.4"
+            rubocop: "1.92.2"
+            legacy: false
+          - os: ubuntu-latest
+            ruby: "3.4"
+            rubocop: "1.80.0"
+            legacy: false
+          - os: macos-latest
+            ruby: "3.4"
+            rubocop: "1.92.2"
+            legacy: false
+          - os: ubuntu-22.04
+            ruby: "2.1"
+            rubocop: "0.52.0"
+            gemfile: Gemfile.compat
+            bundler: "1.17.3"
+            legacy: true
+          - os: ubuntu-22.04
+            ruby: "2.1"
+            rubocop: "0.57.2"
+            gemfile: Gemfile.compat
+            bundler: "1.17.3"
+            legacy: true
+          - os: ubuntu-22.04
+            ruby: "2.4"
+            rubocop: "1.0.0"
+            gemfile: Gemfile.compat
+            bundler: "2.3.26"
+            legacy: true
+          - os: ubuntu-22.04
+            ruby: "2.6"
+            rubocop: "1.50.0"
+            gemfile: Gemfile.compat
+            bundler: "2.4.22"
+            legacy: true
+    runs-on: ${{ matrix.os }}
+    env:
+      BUNDLE_GEMFILE: ${{ matrix.gemfile || 'Gemfile' }}
+      RUBOCOP_VERSION: ${{ matrix.rubocop }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - if: inputs.release-artifact != ''
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: ${{ inputs.release-artifact }}
+          path: ${{ runner.temp }}/release
+      - if: inputs.release-artifact != ''
+        uses: ruby/setup-ruby@b3aaceaef7e0ee231b499e7b5f49c03fc1d32199 # v1
+        with:
+          ruby-version: "3.4"
+          bundler: none
+          bundler-cache: false
+      - if: inputs.release-artifact != ''
+        run: ruby script/release.rb restore "$RUNNER_TEMP/release"
+      - uses: ruby/setup-ruby@b3aaceaef7e0ee231b499e7b5f49c03fc1d32199 # v1
+        with:
+          ruby-version: ${{ matrix.ruby }}
+          bundler: ${{ matrix.bundler || 'default' }}
+          bundler-cache: true
+          cache-version: ${{ matrix.ruby }}-${{ matrix.gemfile || 'Gemfile' }}-${{ matrix.rubocop }}
+      - name: Install actionlint
+        if: matrix.ruby == '3.4' && matrix.rubocop == '1.92.2' && matrix.os == 'ubuntu-latest'
+        run: |
+          GOBIN="$RUNNER_TEMP/bin" go install github.com/rhysd/actionlint/cmd/actionlint@914e7df21a07ef503a81201c76d2b11c789d3fca # v1.7.12
+          echo "$RUNNER_TEMP/bin" >> "$GITHUB_PATH"
+      - name: Check code quality
+        if: matrix.ruby == '3.4' && matrix.rubocop == '1.92.2' && matrix.os == 'ubuntu-latest'
+        run: bundle exec rake quality
+      - if: matrix.legacy != true
+        run: bundle exec rake spec smoke
+      - name: Check runtime compatibility
+        if: matrix.legacy == true
+        run: bundle exec ruby script/compat.rb
+
+  # Source-built artifact checks the runtime-only dependency closure. Canonical
+  # generated-signature package checks run in the modern test matrix.
+  pure-rubocop:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - if: inputs.release-artifact != ''
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: ${{ inputs.release-artifact }}
+          path: ${{ runner.temp }}/release
+      - uses: ruby/setup-ruby@b3aaceaef7e0ee231b499e7b5f49c03fc1d32199 # v1
+        with:
+          ruby-version: "3.4"
+          bundler: none
+          bundler-cache: false
+      - if: inputs.release-artifact != ''
+        run: ruby script/release.rb restore "$RUNNER_TEMP/release"
+      - run: gem install rubocop --no-document
+      - name: Check source-built gem runtime closure without development gems
+        run: |
+          gem build rubocop-osc7501.gemspec --output "$RUNNER_TEMP/rubocop-osc7501.gem"
+          ruby -rrubocop script/smoke.rb "$RUNNER_TEMP/rubocop-osc7501.gem"

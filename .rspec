@@ -1,0 +1,5 @@
+--format progress
+<% if Gem.loaded_specs.key?('rubocop-osc7501') && ENV['RUBOCOP_OSC7501'] %>
+--require rubocop/osc7501
+--format RuboCop::OSC7501::Formatter
+<% end %>

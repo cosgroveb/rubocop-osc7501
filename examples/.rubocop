@@ -1,0 +1,6 @@
+--require
+rubocop/osc7501
+--format
+progress
+--format
+RuboCop::OSC7501::Formatter
