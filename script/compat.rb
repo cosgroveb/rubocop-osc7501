@@ -123,7 +123,7 @@ class Compat
     Dir.mktmpdir('rubocop osc7501 parallel ') do |directory|
       write_files(directory, files)
       cache_root = File.join(directory, 'cache')
-      environment = { 'RUBYLIB' => LIB, 'RUBOCOP_OSC7501' => mode, 'TERM' => nil, 'HOME' => directory,
+      environment = { 'RUBYLIB' => ruby_lib, 'RUBOCOP_OSC7501' => mode, 'TERM' => nil, 'HOME' => directory,
                       'GEM_PATH' => Gem.path.join(File::PATH_SEPARATOR),
                       'XDG_CACHE_HOME' => cache_root, 'PARALLEL_PROCESSOR_COUNT' => '2' }
       command = command_for(%w[--parallel a.rb b.rb], true, true)
@@ -188,7 +188,7 @@ class Compat
     Dir.mktmpdir('rubocop osc7501 compat ') do |directory|
       write_files(directory, files)
       command = command_for(arguments, selected, default_formatters)
-      environment = { 'RUBYLIB' => LIB, 'RUBOCOP_OSC7501' => mode, 'TERM' => nil, 'HOME' => directory,
+      environment = { 'RUBYLIB' => ruby_lib, 'RUBOCOP_OSC7501' => mode, 'TERM' => nil, 'HOME' => directory,
                       'GEM_PATH' => Gem.path.join(File::PATH_SEPARATOR) }
       output, error, status = interrupt ? run_interrupt(environment, command, directory) : capture(environment, command, directory)
       # @type var artifacts: Hash[String, String]
@@ -199,6 +199,13 @@ class Compat
       end
       { output: output, error: error, status: status, files: artifacts }
     end
+  end
+
+  #: () -> String
+  def ruby_lib
+    bundler = Gem.loaded_specs['bundler']
+    bundler_lib = bundler.full_gem_path + '/lib' if bundler && Gem.path.none? { |path| bundler.full_gem_path.start_with?(path) }
+    [LIB, bundler_lib].compact.join(File::PATH_SEPARATOR)
   end
 
   #: (untyped arguments, untyped selected, untyped default_formatters) -> Array[String]
