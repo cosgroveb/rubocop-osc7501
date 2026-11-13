@@ -43,7 +43,11 @@ class InstalledSmoke
       next unless installed
 
       seen[dependency.name] = true
-      install(installed.cache_file, directory)
+      if File.file?(installed.cache_file)
+        install(installed.cache_file, directory)
+      elsif !installed.default_gem?
+        raise "Missing cached gem for #{installed.full_name}"
+      end
       install_dependencies(directory, installed, seen)
     end
   end

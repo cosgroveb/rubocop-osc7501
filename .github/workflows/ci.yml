@@ -33,6 +33,7 @@ jobs:
           - os: ubuntu-latest
             ruby: "3.4"
             rubocop: "1.80.0"
+            rubocop_rspec: "~> 3.7.0"
             legacy: false
           - os: macos-latest
             ruby: "3.4"
@@ -66,6 +67,7 @@ jobs:
     env:
       BUNDLE_GEMFILE: ${{ matrix.gemfile || 'Gemfile' }}
       RUBOCOP_VERSION: ${{ matrix.rubocop }}
+      RUBOCOP_RSPEC_VERSION: ${{ matrix.rubocop_rspec || '~> 3.10' }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:

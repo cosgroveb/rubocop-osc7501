@@ -13,10 +13,12 @@ module Gem
 
   class Specification
     def self.find_all_by_name: (String) -> Array[Specification]
+    def self.find_by_name: (String) -> Specification
     def self.attribute_names: () -> Array[Symbol]
     def self.any?: () -> bool
                  | () { (Specification) -> boolish } -> bool
     def bindir: () -> String
+    def default_gem?: () -> bool
     def name: () -> String
     def runtime_dependencies: () -> Array[Gem::Dependency]
   end

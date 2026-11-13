@@ -124,6 +124,7 @@ class Compat
       write_files(directory, files)
       cache_root = File.join(directory, 'cache')
       environment = { 'RUBYLIB' => LIB, 'RUBOCOP_OSC7501' => mode, 'TERM' => nil, 'HOME' => directory,
+                      'GEM_PATH' => Gem.path.join(File::PATH_SEPARATOR),
                       'XDG_CACHE_HOME' => cache_root, 'PARALLEL_PROCESSOR_COUNT' => '2' }
       command = command_for(%w[--parallel a.rb b.rb], true, true)
       cold = run_in(environment, command, directory)
@@ -187,7 +188,8 @@ class Compat
     Dir.mktmpdir('rubocop osc7501 compat ') do |directory|
       write_files(directory, files)
       command = command_for(arguments, selected, default_formatters)
-      environment = { 'RUBYLIB' => LIB, 'RUBOCOP_OSC7501' => mode, 'TERM' => nil, 'HOME' => directory }
+      environment = { 'RUBYLIB' => LIB, 'RUBOCOP_OSC7501' => mode, 'TERM' => nil, 'HOME' => directory,
+                      'GEM_PATH' => Gem.path.join(File::PATH_SEPARATOR) }
       output, error, status = interrupt ? run_interrupt(environment, command, directory) : capture(environment, command, directory)
       # @type var artifacts: Hash[String, String]
       artifacts = {}
