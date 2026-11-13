@@ -203,8 +203,9 @@ class Compat
 
   #: () -> String
   def ruby_lib
-    bundler = Gem.loaded_specs['bundler']
-    bundler_lib = bundler.full_gem_path + '/lib' if bundler && Gem.path.none? { |path| bundler.full_gem_path.start_with?(path) }
+    bundler_lib = $LOAD_PATH.find do |path|
+      File.file?(File.join(path, 'bundler', 'setup.rb')) && path =~ %r{/gems/[^/]+/lib\z}
+    end
     [LIB, bundler_lib].compact.join(File::PATH_SEPARATOR)
   end
 
@@ -259,27 +260,8 @@ class Compat
     Gem::Version.new(@version) >= Gem::Version.new('1.31.0')
   end
 
-  #: (untyped environment, untyped command, untyped directory) -> void
-  def report_spawn_once(environment, command, directory)
-    return if @reported_spawn || !ENV.key?('CI')
-
-    @reported_spawn = true
-    bundler = Gem.loaded_specs['bundler']
-    bundler_path = bundler ? bundler.full_gem_path : 'none'
-    setup = bundler ? File.join(bundler_path, 'lib', 'bundler', 'setup.rb') : 'none'
-    keys = %w[GEM_PATH RUBYLIB RUBYOPT BUNDLE_GEMFILE BUNDLE_PATH BUNDLE_APP_CONFIG]
-    effective = keys.map do |key|
-      "#{key}=#{environment.key?(key) ? environment[key].inspect : ENV[key].inspect}"
-    end
-    puts "compat spawn: ruby=#{RbConfig.ruby} dir=#{directory} command=#{command.join(' ')}"
-    puts "compat bundler=#{bundler_path} setup=#{setup} exists=#{setup == 'none' ? false : File.exist?(setup)} " \
-         "readable=#{setup == 'none' ? false : File.readable?(setup)} computed_rubylib=#{ruby_lib}"
-    puts "compat env: #{effective.join(' ')}"
-  end
-
   #: (untyped environment, untyped command, untyped directory) -> untyped
   def capture(environment, command, directory)
-    report_spawn_once(environment, command, directory)
     Open3.popen3(environment, *command, chdir: directory, pgroup: true) do |input, output, error, waiter|
       input.close
       readers = [output, error].map { |stream| Thread.new { stream.read } }
@@ -298,7 +280,6 @@ class Compat
 
   #: (untyped environment, untyped command, untyped directory) -> untyped
   def run_interrupt(environment, command, directory)
-    report_spawn_once(environment, command, directory)
     output_path = File.join(directory, 'compat-stdout')
     error_path = File.join(directory, 'compat-stderr')
     pid = Process.spawn(environment, *command, chdir: directory, out: output_path, err: error_path, pgroup: true)
