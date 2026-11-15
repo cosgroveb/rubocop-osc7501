@@ -36,6 +36,13 @@ module RuboCop
         nil
       end
 
+      #: (untyped file, untyped options) -> nil
+      def file_started(file, _options)
+        invocation = @invocation
+        invocation.file_started(self, file) if invocation
+        nil
+      end
+
       #: (untyped file, untyped offenses) -> nil
       def file_finished(_file, offenses)
         invocation = @invocation

@@ -466,6 +466,46 @@ RSpec.describe RuboCop::OSC7501::Lifecycle do
     end
   end
 
+  describe 'window titles' do
+    it 'titles the terminal with the current file and returns it to rubocop' do
+      clock = { seconds: 0.0 }
+      inv = described_class::Invocation.new(mode: 'force', clock: proc { clock[:seconds] })
+      writer = RuboCop::OSC7501::Writer.new(output, mode: 'force')
+      formatter = Object.new
+      inv.add_formatter(formatter, writer)
+      inv.attach
+      inv.started(formatter, 2)
+      clock[:seconds] = 0.2
+      inv.file_started(formatter, 'app/models/user.rb')
+      clock[:seconds] = 0.4
+      inv.file_started(formatter, 'app/models/post.rb')
+      inv.finish_result(0)
+      expect(titles(output.string)).to eq(['rubocop',
+                                           'rubocop',
+                                           'rubocop › app/models/user.rb',
+                                           'rubocop › app/models/post.rb',
+                                           'rubocop'])
+    end
+
+    it 'keeps the last title while throttled file results update' do
+      clock = { seconds: 0.0 }
+      inv = described_class::Invocation.new(mode: 'force', clock: proc { clock[:seconds] })
+      writer = RuboCop::OSC7501::Writer.new(output, mode: 'force')
+      formatter = Object.new
+      inv.add_formatter(formatter, writer)
+      inv.attach
+      inv.started(formatter, 2)
+      clock[:seconds] = 0.2
+      inv.file_started(formatter, 'lib/a.rb')
+      inv.file_finished(formatter, [])
+      inv.finish_result(0)
+      expect(titles(output.string)).to eq(['rubocop',
+                                           'rubocop',
+                                           'rubocop › lib/a.rb',
+                                           'rubocop'])
+    end
+  end
+
   describe 'throttling' do
     it 'bounds file-result updates to 0.1 monotonic seconds while initial and final bypass' do
       clock = { seconds: 0.0 }

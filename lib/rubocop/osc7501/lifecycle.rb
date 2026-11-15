@@ -55,6 +55,7 @@ module RuboCop
         # @rbs @closed: bool
         # @rbs @last_update: Float
         # @rbs @runner_aborting: bool
+        # @rbs @current_file: String?
 
         attr_reader :mode, :reporter
 
@@ -77,6 +78,7 @@ module RuboCop
           @closed = false
           @last_update = @clock.call
           @runner_aborting = false
+          @current_file = nil
         end
 
         # Registers a selected OSC formatter in native construction order.
@@ -108,6 +110,19 @@ module RuboCop
           nil
         end
 
+        #: (untyped formatter, untyped file) -> nil
+        def file_started(formatter, file)
+          return nil unless reporter.equal?(formatter)
+
+          @current_file = file.to_s
+          now = @clock.call
+          return nil if now - @last_update < 0.1
+
+          @last_update = now
+          emit_working(count_message, @current_file)
+          nil
+        end
+
         #: (untyped formatter, untyped offenses) -> nil
         def file_finished(formatter, offenses)
           return nil unless reporter.equal?(formatter)
@@ -118,7 +133,7 @@ module RuboCop
           return nil if now - @last_update < 0.1
 
           @last_update = now
-          emit_working(count_message)
+          emit_working(count_message, @current_file)
           nil
         end
 
@@ -172,12 +187,12 @@ module RuboCop
 
         private
 
-        #: (String) -> void
-        def emit_working(message)
+        #: (String, ?String?) -> void
+        def emit_working(message, window_title = nil)
           return if @finished || reporter.nil?
 
           writer = @reporter_writer
-          writer.emit(state: 'working', msg: message) if writer
+          writer.emit(state: 'working', msg: message, window_title: window_title) if writer
         end
 
         #: (String, String) -> nil

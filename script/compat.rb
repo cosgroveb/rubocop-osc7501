@@ -326,7 +326,7 @@ class Compat
 
   #: (untyped output) -> untyped
   def without_frames(output)
-    output.gsub(/\e\]7501;[^\e]*\e\\/, '')
+    output.gsub(/\e\](?:2|7501);[^\e]*\e\\/, '')
   end
 
   #: (untyped label, untyped enabled, untyped disabled) -> void
