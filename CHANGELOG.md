@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+## 0.2.0 - 2026-11-15
+
+- Show the current file in the terminal title \(\#2\) ([48f7542](https://github.com/cosgroveb/rubocop-osc7501/commit/48f7542b89c4e70450c2260fd0b851299728fbc1))
+
 ## 0.1.0 - 2026-11-13
 
 - Add opt-in OSC 7501 reporting for RuboCop ([60239fa](https://github.com/cosgroveb/rubocop-osc7501/commit/60239faa66d79897525a96f66d4f988d22b00a41))
