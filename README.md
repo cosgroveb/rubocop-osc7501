@@ -112,8 +112,14 @@ root record, as with the sibling gems. No terminal, display, dismissal or
 notification guarantee follows from encoded frames. Live Rex and tmux
 acceptance has not been verified.
 
+Reporting also sets the terminal title. While files are inspected, the title
+is `rubocop › <current file>`, following the same throttled cadence as progress
+messages. The title returns to `rubocop` on completion, failure and stop.
+
 Messages are bounded to 2048 decoded UTF-8 bytes after ANSI, control and
-whitespace sanitization. Terminal formatting is removed. Writer I/O failures
+whitespace sanitization. Window titles use the same sanitization and are
+capped at 512 bytes including the `rubocop › ` prefix. Terminal formatting is
+removed. Writer I/O failures
 disable reporting without closing borrowed streams or replacing the command's
 result.
 

@@ -17,7 +17,12 @@ module FrameHelpers
 
   #: (String) -> String
   def self.without_frames(output)
-    output.gsub(/\e\]7501;[^\e]*\e\\/, '')
+    output.gsub(/\e\](?:2|7501);[^\e]*\e\\/, '')
+  end
+
+  #: (String) -> Array[String]
+  def self.titles_from(output)
+    output.scan(/\e\]2;([^\e]*)\e\\/).map { |(title)| title.force_encoding('UTF-8') }
   end
 
   #: (String) -> Array[Hash[String, String]]
@@ -28,5 +33,10 @@ module FrameHelpers
   #: (String) -> String
   def without_frames(output)
     FrameHelpers.without_frames(output)
+  end
+
+  #: (String) -> Array[String]
+  def titles(output)
+    FrameHelpers.titles_from(output)
   end
 end

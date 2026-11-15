@@ -30,7 +30,7 @@ class ProcessHelpers
         path = File.join(directory, name)
         result[name] = File.binread(path) if File.file?(path)
       end
-      { frames: FrameHelpers.frames_from(output), stdout: FrameHelpers.without_frames(output), stderr: error, status: status,
+      { frames: FrameHelpers.frames_from(output), titles: FrameHelpers.titles_from(output), stdout: FrameHelpers.without_frames(output), stderr: error, status: status,
         artifacts: artifacts }
     end
   end
@@ -54,7 +54,7 @@ class ProcessHelpers
         path = File.join(directory, name)
         result[name] = File.binread(path) if File.file?(path)
       end
-      { frames: FrameHelpers.frames_from(output), stdout: FrameHelpers.without_frames(output), stderr: error, status: status,
+      { frames: FrameHelpers.frames_from(output), titles: FrameHelpers.titles_from(output), stdout: FrameHelpers.without_frames(output), stderr: error, status: status,
         artifacts: artifacts }
     end
   end

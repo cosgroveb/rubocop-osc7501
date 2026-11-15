@@ -6,6 +6,9 @@ module RuboCop
     # Encodes status records onto an output stream following the family
     # writer contract. Private to the adapter.
     class Writer # :nodoc: all
+      TITLE_BYTE_LIMIT = 512
+      TITLE_PREFIX = 'rubocop'
+
       # Base64 of "RuboCop".
       ENCODED_TITLE = ['RuboCop'].pack('m0').freeze
 
@@ -28,11 +31,15 @@ module RuboCop
         @enabled
       end
 
-      #: (state: String, msg: String) -> nil
-      def emit(state:, msg:)
+      #: (state: String, msg: String, ?window_title: String?) -> nil
+      def emit(state:, msg:, window_title: nil)
         return nil unless @enabled
 
-        fields = ['app=rubocop', "title=#{ENCODED_TITLE}", "state=#{state}", "msg=#{encode(msg, 2048)}"]
+        # Compose only after sanitizing the name so binary input cannot mix encodings.
+        name = window_title && sanitize(window_title, TITLE_BYTE_LIMIT)
+        title = name && !name.empty? && sanitize(TITLE_PREFIX + ' › ' + name, TITLE_BYTE_LIMIT)
+        @output.write("\e]2;#{title || TITLE_PREFIX}\e\\")
+        fields = ['app=rubocop', "title=#{ENCODED_TITLE}", "state=#{state}", "msg=#{[sanitize(msg, 2048)].pack('m0')}"]
         @output.write("\e]7501;#{fields.join(':')}\e\\")
         @output.flush if @output.respond_to?(:flush)
         nil
@@ -73,18 +80,17 @@ module RuboCop
       end
 
       #: (String, Integer) -> String
-      def encode(text, byte_limit)
+      def sanitize(text, byte_limit)
         input = text.to_s.byteslice(0, sanitization_byte_limit(byte_limit)) #: String
         plain = input.encode('UTF-8', invalid: :replace, undef: :replace)
         plain = plain.gsub(/\e\[[0-9;?]*[ -\/]*[@-~]/, '')
         plain = plain.gsub(/[\u0000-\u001F\u007F-\u009F]/, ' ')
         clean = plain.gsub(/\s+/, ' ').strip
         bytes = 0
-        bounded = clean.each_char.take_while do |char|
+        clean.each_char.take_while do |char|
           bytes += char.bytesize
           bytes <= byte_limit
         end.join
-        [bounded].pack('m0')
       end
 
       # Bound sanitization work with 50% headroom for removed formatting.

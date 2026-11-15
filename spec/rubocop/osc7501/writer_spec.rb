@@ -52,7 +52,22 @@ RSpec.describe RuboCop::OSC7501::Writer do
     expect(record).not_to have_key('id')
     expect(record).not_to have_key('progress')
     expect(record).not_to have_key('kind')
-    expect(output.string).to start_with("\e]7501;").and(end_with("\e\\"))
+    expect(output.string).to start_with("\e]2;rubocop\e\\\e]7501;").and(end_with("\e\\"))
+  end
+
+  it 'composes a bounded sanitized window title with the prefix' do
+    binary = "broken-\xE2\x28\xA1".dup.force_encoding('BINARY')
+    writer(output).emit(state: 'working', msg: 'x',
+                       window_title: "\e[31m\t\x01#{binary}\n app/models/user.rb " * 40)
+    title = output.string[/\A\e\]2;([^\e]*)\e\\/, 1]
+    expect(title.bytesize).to be <= 512
+    expect(title).to be_valid_encoding
+    expect(title).to start_with('rubocop › ')
+  end
+
+  it 'falls back to the bare prefix without a window title' do
+    writer(output).emit(state: 'done', msg: 'Inspection complete')
+    expect(output.string).to start_with("\e]2;rubocop\e\\")
   end
 
   it 'sanitizes terminal formatting, controls and invalid bytes into one line' do
@@ -192,6 +207,6 @@ RSpec.describe RuboCop::OSC7501::Writer do
 
   #: (String, String) -> String
   def frame_text(state, msg)
-    "\e]7501;app=rubocop:title=UnVib0NvcA==:state=#{state}:msg=#{["#{msg}"].pack('m0')}\e\\"
+    "\e]2;rubocop\e\\\e]7501;app=rubocop:title=UnVib0NvcA==:state=#{state}:msg=#{["#{msg}"].pack('m0')}\e\\"
   end
 end
